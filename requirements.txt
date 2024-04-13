@@ -1,1 +1,2 @@
 common-code[test] @ git+https://github.com/swiss-ai-center/common-code.git@main
+requests==2.31.0

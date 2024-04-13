@@ -1,5 +1,7 @@
 import asyncio
+import json
 import time
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -20,6 +22,9 @@ from contextlib import asynccontextmanager
 
 # Imports required by the service's model
 # TODO: 1. ADD REQUIRED IMPORTS (ALSO IN THE REQUIREMENTS.TXT)
+import requests
+import zipfile
+import io
 
 settings = get_settings()
 
@@ -27,7 +32,7 @@ settings = get_settings()
 class MyService(Service):
     # TODO: 2. CHANGE THIS DESCRIPTION
     """
-    My service model
+    Hugging Face service uses Hugging Face's model hub API to directly query AI models
     """
 
     # Any additional fields must be excluded for Pydantic to work
@@ -37,8 +42,8 @@ class MyService(Service):
     def __init__(self):
         super().__init__(
             # TODO: 3. CHANGE THE SERVICE NAME AND SLUG
-            name="My Service",
-            slug="my-service",
+            name="Hugging Face",
+            slug="hugging-face",
             url=settings.service_url,
             summary=api_summary,
             description=api_description,
@@ -46,16 +51,21 @@ class MyService(Service):
             # TODO: 4. CHANGE THE INPUT AND OUTPUT FIELDS, THE TAGS AND THE HAS_AI VARIABLE
             data_in_fields=[
                 FieldDescription(
-                    name="image",
+                    name="json_description",
                     type=[
-                        FieldDescriptionType.IMAGE_PNG,
-                        FieldDescriptionType.IMAGE_JPEG,
+                        FieldDescriptionType.APPLICATION_JSON
                     ],
+                ),
+                FieldDescription(
+                    name="hugging_input",
+                    type=[
+                        FieldDescriptionType.APPLICATION_ZIP
+                    ]
                 ),
             ],
             data_out_fields=[
                 FieldDescription(
-                    name="result", type=[FieldDescriptionType.APPLICATION_JSON]
+                    name="result", type=[FieldDescriptionType.APPLICATION_ZIP]
                 ),
             ],
             tags=[
@@ -63,8 +73,12 @@ class MyService(Service):
                     name=ExecutionUnitTagName.IMAGE_PROCESSING,
                     acronym=ExecutionUnitTagAcronym.IMAGE_PROCESSING,
                 ),
+                ExecutionUnitTag(
+                    name=ExecutionUnitTagName.NATURAL_LANGUAGE_PROCESSING,
+                    acronym=ExecutionUnitTagAcronym.NATURAL_LANGUAGE_PROCESSING,
+                ),
             ],
-            has_ai=False,
+            has_ai=True,
             # OPTIONAL: CHANGE THE DOCS URL TO YOUR SERVICE'S DOCS
             docs_url="https://docs.swiss-ai-center.ch/reference/core-concepts/service/",
         )
@@ -79,10 +93,55 @@ class MyService(Service):
         # input_type = data["image"].type
         # ... do something with the raw data
 
-        # NOTE that the result must be a dictionary with the keys being the field names set in the data_out_fields
-        return {
-            "result": TaskData(data=..., type=FieldDescriptionType.APPLICATION_JSON)
-        }
+        json_description = json.loads(data['json_description'].data.decode('utf-8'))
+        api_token = json_description['api_token']
+        api_url = json_description['api_url']
+        headers = {"Authorization": f"Bearer {api_token}"}
+
+        def extract_file_from_zip(zip_bytes):
+            with zipfile.ZipFile(io.BytesIO(zip_bytes), 'r') as zip_ref:
+                # there should be only one file in the zip
+                file_name = zip_ref.namelist()[0]
+                return zip_ref.read(file_name)
+
+        def create_zip_from_json(json_data):
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                zip_file.writestr("result.json", json.dumps(json_data, indent=4))
+            zip_bytes = zip_buffer.getvalue()
+            return zip_bytes
+
+        def natural_language_query(payload):
+            response = requests.post(api_url, headers=headers, json=payload)
+            return response.json()
+
+        def audio_or_image_to_json_query(audio_data):
+            response = requests.request("POST", api_url, headers=headers, data=audio_data)
+            return json.loads(response.content.decode("utf-8"))
+
+
+        zip_file_bytes = data['hugging_input'].data
+        file_data = extract_file_from_zip(zip_file_bytes)
+        if json_description['input_type'] == FieldDescriptionType.APPLICATION_JSON:
+            json_payload = json.loads(file_data.decode('utf-8'))
+            result_data = natural_language_query(json_payload)
+            return {
+                "result": TaskData(data=create_zip_from_json(result_data),
+                                   type=FieldDescriptionType.APPLICATION_ZIP)
+            }
+        elif json_description['input_type'] == FieldDescriptionType.AUDIO_MP3:
+            result_data = audio_or_image_to_json_query(file_data)
+            return {
+                "result": TaskData(data=create_zip_from_json(result_data),
+                                   type=FieldDescriptionType.APPLICATION_ZIP)
+            }
+        elif json_description['input_type'] == FieldDescriptionType.IMAGE_PNG or FieldDescriptionType.IMAGE_JPEG == \
+                json_description['input_type']:
+            result_data = audio_or_image_to_json_query(file_data)
+            return {
+                "result": TaskData(data=create_zip_from_json(result_data),
+                                   type=FieldDescriptionType.APPLICATION_ZIP)
+            }
 
 
 service_service: ServiceService | None = None
@@ -136,18 +195,16 @@ async def lifespan(app: FastAPI):
 
 
 # TODO: 6. CHANGE THE API DESCRIPTION AND SUMMARY
-api_description = """My service
-bla bla bla...
+api_description = """A service that uses Hugging Face's model hub API to directly query AI models
 """
-api_summary = """My service
-bla bla bla...
+api_summary = """A service that uses Hugging Face's model hub API to directly query AI models
 """
 
 # Define the FastAPI application with information
 # TODO: 7. CHANGE THE API TITLE, VERSION, CONTACT AND LICENSE
 app = FastAPI(
     lifespan=lifespan,
-    title="Sample Service API.",
+    title="Hugging Face service",
     description=api_description,
     version="0.0.1",
     contact={
