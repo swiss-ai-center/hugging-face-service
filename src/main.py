@@ -211,15 +211,16 @@ async def lifespan(app: FastAPI):
 
 api_description = """This service uses Hugging Face's model hub API to directly query AI models \n
 You can choose from any model available on the inference API from the [Hugging Face Hub](https://huggingface.co/models)
+ that takes image, audio or text(json) files as input and outputs one of the mentioned types.
 
-This service has two inputs:
+This service has two input files:
  - A json file that defines the model you want to use, your access token and the input/output types you expect.
  - A zip file containing the input file.
  
 json_description.json example:
  ```
  {
-    "api_token": "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",
+    "api_token": "your_token",
     "api_url": "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2",
     "input_type": "application/json",
     "output_type": "application/json"
@@ -245,6 +246,7 @@ The model may need some time to load on Hugging face's side, you may encounter a
 Helpful trick: The answer from the inference API is cached, so if you encounter a loading error make sure to change the
 input ever so slightly.
 """
+
 api_summary = """A service that uses Hugging Face's model hub API to directly query AI models
 """
 
