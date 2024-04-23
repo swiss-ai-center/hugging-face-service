@@ -21,7 +21,6 @@ from common_code.common.models import FieldDescription, ExecutionUnitTag
 from contextlib import asynccontextmanager
 
 # Imports required by the service's model
-# TODO: 1. ADD REQUIRED IMPORTS (ALSO IN THE REQUIREMENTS.TXT)
 import requests
 import zipfile
 import io
@@ -83,9 +82,14 @@ class MyService(Service):
         self._logger = get_logger(settings)
 
     def process(self, data):
-        json_description = json.loads(data['json_description'].data.decode('utf-8'))
-        api_token = json_description['api_token']
-        api_url = json_description['api_url']
+        try:
+            json_description = json.loads(data['json_description'].data.decode('utf-8'))
+            api_token = json_description['api_token']
+            api_url = json_description['api_url']
+        except ValueError as err:
+            raise Exception(f"json_description is invalid: {str(err)}")
+        except KeyError as err:
+            raise Exception(f"api_url or api_token missing from json_description: {str(err)}")
         headers = {"Authorization": f"Bearer {api_token}"}
 
         def extract_file_from_zip(zip_bytes):
@@ -205,7 +209,6 @@ async def lifespan(app: FastAPI):
         await service_service.graceful_shutdown(my_service, engine_url)
 
 
-# TODO: 6. CHANGE THE API DESCRIPTION AND SUMMARY
 api_description = """This service uses Hugging Face's model hub API to directly query AI models \n
 You can choose from any model available on the inference API from the [Hugging Face Hub](https://huggingface.co/models)
 
@@ -251,7 +254,7 @@ app = FastAPI(
     lifespan=lifespan,
     title="Hugging Face service",
     description=api_description,
-    version="0.0.1",
+    version="0.0.2",
     contact={
         "name": "Swiss AI Center",
         "url": "https://swiss-ai-center.ch/",
