@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -22,6 +23,7 @@ from contextlib import asynccontextmanager
 
 # Imports required by the service's model
 import requests
+from pydub import AudioSegment
 import zipfile
 import io
 
@@ -42,7 +44,7 @@ class MyService(Service):
         super().__init__(
             name="Hugging Face",
             slug="hugging-face",
-            url=settings.service_url,
+            url="http://localhost:9090",
             summary=api_summary,
             description=api_description,
             status=ServiceStatus.AVAILABLE,
@@ -148,10 +150,11 @@ class MyService(Service):
             case FieldDescriptionType.IMAGE_JPEG:
                 processed_data = create_zip_from_bytes(result_data.content, "result.jpg")
             case FieldDescriptionType.AUDIO_MP3:
-                # TODO Find a way to convert this to mp3 as requested
-                processed_data = create_zip_from_bytes(result_data.content, "result.wav")
+                audio_segment = AudioSegment.from_file(io.BytesIO(result_data.content))
+                processed_data = create_zip_from_bytes(audio_segment.export(format='mp3').read(), "result.mp3")
             case FieldDescriptionType.AUDIO_OGG:
-                processed_data = create_zip_from_bytes(result_data.content, "result.ogg")
+                audio_segment = AudioSegment.from_file(io.BytesIO(result_data.content))
+                processed_data = create_zip_from_bytes(audio_segment.export(format='ogg').read(), "result.ogg")
 
         return {
             "result": TaskData(data=processed_data,
@@ -289,3 +292,7 @@ app.add_middleware(
 @app.get("/", include_in_schema=False)
 async def root():
     return RedirectResponse("/docs", status_code=301)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=9090)
