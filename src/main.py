@@ -2,7 +2,6 @@ import asyncio
 import json
 import time
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -31,7 +30,6 @@ settings = get_settings()
 
 
 class MyService(Service):
-    # TODO: 2. CHANGE THIS DESCRIPTION
     """
     Hugging Face service uses Hugging Face's model hub API to directly query AI models
     """
@@ -44,7 +42,7 @@ class MyService(Service):
         super().__init__(
             name="Hugging Face",
             slug="hugging-face",
-            url="http://localhost:9090",
+            url=settings.service_url,
             summary=api_summary,
             description=api_description,
             status=ServiceStatus.AVAILABLE,
@@ -219,7 +217,7 @@ You can choose from any model available on the inference API from the [Hugging F
 This service has two input files:
  - A json file that defines the model you want to use, your access token and the input/output types you expect.
  - A zip file containing the input file.
- 
+
 json_description.json example:
  ```
  {
@@ -229,7 +227,7 @@ json_description.json example:
     "output_type": "application/json"
 }
 ```
-This specific model "roberta-base-squad2" was trained on question-answer pairs, including unanswerable questions, 
+This specific model "roberta-base-squad2" was trained on question-answer pairs, including unanswerable questions,
 for the task of Question Answering.
 
 The input looks like this:
@@ -254,12 +252,11 @@ api_summary = """A service that uses Hugging Face's model hub API to directly qu
 """
 
 # Define the FastAPI application with information
-# TODO: 7. CHANGE THE API TITLE, VERSION, CONTACT AND LICENSE
 app = FastAPI(
     lifespan=lifespan,
     title="Hugging Face service",
     description=api_description,
-    version="0.0.2",
+    version="1.0.0",
     contact={
         "name": "Swiss AI Center",
         "url": "https://swiss-ai-center.ch/",
@@ -292,7 +289,3 @@ app.add_middleware(
 @app.get("/", include_in_schema=False)
 async def root():
     return RedirectResponse("/docs", status_code=301)
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=9090)
