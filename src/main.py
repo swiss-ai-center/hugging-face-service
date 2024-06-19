@@ -67,12 +67,8 @@ class MyService(Service):
             ],
             tags=[
                 ExecutionUnitTag(
-                    name=ExecutionUnitTagName.IMAGE_PROCESSING,
-                    acronym=ExecutionUnitTagAcronym.IMAGE_PROCESSING,
-                ),
-                ExecutionUnitTag(
-                    name=ExecutionUnitTagName.NATURAL_LANGUAGE_PROCESSING,
-                    acronym=ExecutionUnitTagAcronym.NATURAL_LANGUAGE_PROCESSING,
+                    name=ExecutionUnitTagName.GENERIC,
+                    acronym=ExecutionUnitTagAcronym.GENERIC,
                 ),
             ],
             has_ai=True,
