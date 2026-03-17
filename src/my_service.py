@@ -59,6 +59,7 @@ api_summary = """A service that uses Hugging Face's model hub API to directly qu
 api_title = "Hugging Face service"
 version = "1.0.0"
 
+
 class MyService(Service):
     """
     Hugging Face service uses Hugging Face's model hub API to directly query AI models

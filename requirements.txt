@@ -1,3 +1,4 @@
+# @Deprecated: This file is deprecated. Please use pyproject.toml instead.
 common-code[test] @ git+https://github.com/swiss-ai-center/common-code.git@main
 requests==2.31.0
 pydub==0.25.1
